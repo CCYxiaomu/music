@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebMusic - 在线音乐播放器</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #000;
+            color: #fff;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 视频背景 */
+        .video-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-background video {
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            object-position: center center;
+        }
+
+        .video-background::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.1);
+            z-index: 1;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .header {
+            background: rgba(19, 19, 19, 0.75);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0 20px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #ec4141;
+        }
+
+        .logo i {
+            font-size: 28px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 30px;
+        }
+
+        .nav-tab {
+            color: #999;
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 20px;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .nav-tab:hover,
+        .nav-tab.active {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box input {
+            background: #2a2a2a;
+            border: none;
+            padding: 8px 15px 8px 35px;
+            border-radius: 20px;
+            color: #fff;
+            width: 200px;
+            outline: none;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 220px;
+            background: rgba(19, 19, 19, 0.8);
+            backdrop-filter: blur(12px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px 0;
+            overflow-y: auto;
+        }
+
+        .sidebar-section {
+            margin-bottom: 25px;
+        }
+
+        .sidebar-title {
+            padding: 0 20px;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .sidebar-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #999;
+        }
+
+        .sidebar-item:hover,
+        .sidebar-item.active {
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+        }
+
+        .sidebar-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            background: rgba(26, 26, 26, 0.65);
+            backdrop-filter: blur(10px);
+        }
+
+        .song-detail-header {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, rgba(236, 65, 65, 0.1) 0%, rgba(236, 65, 65, 0.05) 100%);
+            border-radius: 12px;
+        }
+
+        .album-cover-large {
+            width: 240px;
+            height: 240px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            flex-shrink: 0;
+        }
+
+        .album-cover-large img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .song-detail-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .song-detail-info h1 {
+            font-size: 32px;
+            margin-bottom: 15px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+        }
+
+        .song-detail-info .artist {
+            font-size: 18px;
+            color: #fff;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        .detail-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .detail-btn {
+            padding: 12px 30px;
+            border-radius: 25px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .play-btn-large {
+            background: #ec4141;
+            color: #fff;
+        }
+
+        .play-btn-large:hover {
+            background: #d63a3a;
+        }
+
+        .mode-btn-detail {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .mode-btn-detail:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .playlist-section {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .playlist-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        .playlist-header h2 {
+            font-size: 20px;
+        }
+
+        .song-list-header {
+            display: grid;
+            grid-template-columns: 50px 2fr 1fr 80px;
+            padding: 10px 15px;
+            color: #666;
+            font-size: 12px;
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        .song-list-item {
+            display: grid;
+            grid-template-columns: 50px 2fr 1fr 80px;
+            padding: 12px 15px;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 6px;
+        }
+
+        .song-list-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .song-list-item.active {
+            background: rgba(236, 65, 65, 0.15);
+        }
+
+        .song-number {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .song-list-item.active .song-number {
+            color: #ec4141;
+        }
+
+        .song-name-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .song-name-cell img {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            object-fit: cover;
+        }
+
+        .song-name-text {
+            font-weight: 500;
+        }
+
+        .song-artist-cell {
+            color: #999;
+        }
+
+        .song-duration-cell {
+            color: #666;
+            text-align: right;
+        }
+
+        .lyrics-panel {
+            width: 350px;
+            background: rgba(19, 19, 19, 0.8);
+            backdrop-filter: blur(12px);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 30px 20px;
+            overflow-y: auto;
+        }
+
+        .lyrics-title {
+            font-size: 16px;
+            margin-bottom: 20px;
+            color: #999;
+            text-align: center;
+        }
+
+        .lyrics-content {
+            line-height: 2;
+        }
+
+        .lyric-line {
+            padding: 8px 15px;
+            color: #666;
+            transition: all 0.3s;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .lyric-line.active {
+            color: #ec4141;
+            background: rgba(236, 65, 65, 0.1);
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .player-bar {
+            background: rgba(26, 26, 26, 0.85);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 20px;
+            display: grid;
+            grid-template-columns: 280px 1fr 280px;
+            align-items: center;
+            gap: 20px;
+            height: 80px;
+        }
+
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .player-cover {
+            width: 55px;
+            height: 55px;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .player-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .player-song-info {
+            flex: 1;
+        }
+
+        .player-song-name {
+            font-size: 14px;
+            margin-bottom: 5px;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+        }
+
+        .player-artist-name {
+            font-size: 12px;
+            color: #ddd;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+        }
+
+        .player-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-buttons {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .control-btn {
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s;
+            padding: 8px;
+        }
+
+        .control-btn:hover {
+            color: #fff;
+            transform: scale(1.1);
+        }
+
+        .play-pause-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: #fff;
+            color: #131313;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .play-pause-btn:hover {
+            transform: scale(1.05);
+            background: #f0f0f0;
+        }
+
+        .progress-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .time-text {
+            font-size: 11px;
+            color: #666;
+            min-width: 40px;
+        }
+
+        .progress-bar-container {
+            flex: 1;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: #ec4141;
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.1s;
+        }
+
+        .player-extra {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            justify-content: flex-end;
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .volume-slider {
+            width: 80px;
+            -webkit-appearance: none;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .mode-badge {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mode-badge:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #131313;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #444;
+        }
+
+        @media (max-width: 1200px) {
+            .lyrics-panel {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+            
+            .player-bar {
+                grid-template-columns: 1fr;
+                height: auto;
+                padding: 15px;
+            }
+            
+            .song-detail-header {
+                flex-direction: column;
+            }
+            
+            .album-cover-large {
+                width: 100%;
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 视频背景 -->
+    <div class="video-background">
+        <video autoplay muted loop playsinline>
+            <source src="images/【哲风壁纸】二次元少女-剑光.mp4" type="video/mp4">
+        </video>
+    </div>
+
+    <div class="app-container">
+        <div class="header">
+            <div class="logo">
+                <i class="fas fa-music"></i>
+                <span>WebMusic</span>
+            </div>
+            <div class="nav-tabs">
+                <div class="nav-tab active">发现音乐</div>
+                <div class="nav-tab">我的音乐</div>
+                <div class="nav-tab">朋友</div>
+            </div>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="搜索音乐...">
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="sidebar-section">
+                    <div class="sidebar-title">在线音乐</div>
+                    <div class="sidebar-item active" data-artist="all">
+                        <i class="fas fa-compass"></i>
+                        <span>全部歌曲</span>
+                    </div>
+                    <div class="sidebar-item" data-artist="周杰伦">
+                        <i class="fas fa-user"></i>
+                        <span>周杰伦</span>
+                    </div>
+                    <div class="sidebar-item" data-artist="陈奕迅">
+                        <i class="fas fa-user"></i>
+                        <span>陈奕迅</span>
+                    </div>
+                    <div class="sidebar-item" data-artist="邓紫棋">
+                        <i class="fas fa-user"></i>
+                        <span>邓紫棋</span>
+                    </div>
+                    <div class="sidebar-item" data-artist="李荣浩">
+                        <i class="fas fa-user"></i>
+                        <span>李荣浩</span>
+                    </div>
+                </div>
+                <div class="sidebar-section">
+                    <div class="sidebar-title">我的音乐</div>
+                    <div class="sidebar-item">
+                        <i class="fas fa-heart"></i>
+                        <span>我喜欢的</span>
+                    </div>
+                    <div class="sidebar-item">
+                        <i class="fas fa-download"></i>
+                        <span>本地与下载</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <div class="song-detail-header">
+                    <div class="album-cover-large">
+                        <img id="largeCover" src="" alt="专辑封面">
+                    </div>
+                    <div class="song-detail-info">
+                        <h1 id="largeSongName">加载中...</h1>
+                        <div class="artist" id="largeArtistName">--</div>
+                        <div class="detail-controls">
+                            <button class="detail-btn play-btn-large" id="detailPlayBtn">
+                                <i class="fas fa-play"></i> 播放
+                            </button>
+                            <button class="detail-btn mode-btn-detail" id="detailModeBtn">
+                                <i class="fas fa-list"></i> <span id="detailModeText">顺序播放</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="playlist-section">
+                    <div class="playlist-header">
+                        <h2 id="playlistTitle">全部歌曲</h2>
+                        <span style="color: #666; font-size: 13px;" id="songCount">0首</span>
+                    </div>
+                    <div class="song-list-header">
+                        <div></div>
+                        <div>歌曲</div>
+                        <div>歌手</div>
+                        <div style="text-align: right;">时长</div>
+                    </div>
+                    <div id="songListContainer"></div>
+                </div>
+            </div>
+
+            <div class="lyrics-panel">
+                <div class="lyrics-title">歌词</div>
+                <div class="lyrics-content" id="lyricsContainer">
+                    <div class="lyric-line">选择歌曲开始播放</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="player-bar">
+            <div class="player-info">
+                <div class="player-cover">
+                    <img id="playerCover" src="" alt="封面">
+                </div>
+                <div class="player-song-info">
+                    <div class="player-song-name" id="playerSongName">未播放</div>
+                    <div class="player-artist-name" id="playerArtistName">--</div>
+                </div>
+            </div>
+
+            <div class="player-controls">
+                <div class="control-buttons">
+                    <button class="control-btn" id="prevBtn"><i class="fas fa-step-backward"></i></button>
+                    <button class="control-btn play-pause-btn" id="playBtn"><i class="fas fa-play"></i></button>
+                    <button class="control-btn" id="nextBtn"><i class="fas fa-step-forward"></i></button>
+                </div>
+                <div class="progress-section">
+                    <span class="time-text" id="currentTime">0:00</span>
+                    <div class="progress-bar-container" id="progressBar">
+                        <div class="progress-bar-fill" id="progressFill"></div>
+                    </div>
+                    <span class="time-text" id="duration">0:00</span>
+                </div>
+            </div>
+
+            <div class="player-extra">
+                <div class="volume-control">
+                    <i class="fas fa-volume-up" style="color: #999;"></i>
+                    <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.01" value="0.7">
+                </div>
+                <div class="mode-badge" id="modeBadge">
+                    <i class="fas fa-list"></i> <span id="modeText">顺序</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <audio id="audioPlayer" preload="auto"></audio>
+
+    <script>
+        const SONGS_DB = {
+            "周杰伦": [
+                { id: "jay1", name: "七里香", artist: "周杰伦", audioUrl: "music/周杰伦 - 七里香.mp3", cover: "images/微信图片_20260424155839_5_2.jpg", lrc: `[00:00.00]七里香 - 周杰伦\n[00:12.00]窗外的麻雀 在电线杆上多嘴\n[00:24.00]你说这一句 很有夏天的感觉\n[00:36.00]手中的铅笔 在纸上来来回回\n[00:48.00]我用几行字形容你是我的谁\n[01:00.00]秋刀鱼的滋味 猫跟你都想了解\n[01:12.00]初恋的香味就这样被我们寻回\n[01:24.00]那温暖的阳光 像刚摘的鲜艳草莓\n[01:36.00]你说你舍不得吃掉这一种感觉\n[01:48.00]雨下整夜 我的爱溢出就像雨水\n[02:00.00]院子落叶 跟我的思念厚厚一叠\n[02:12.00]几句是非 也无法将我的热情冷却\n[02:24.00]你出现在我诗的每一页\n[02:36.00]雨下整夜 我的爱溢出就像雨水\n[02:48.00]窗台蝴蝶 像诗里纷飞的美丽章节\n[03:00.00]我接着写 把永远爱你写进诗的结尾\n[03:12.00]你是我唯一想要的了解\n[03:28.00]那饱满的稻穗 幸福了这个季节\n[03:40.00]而你的脸颊像田里熟透的番茄\n[03:52.00]你突然对我说 七里香的名字很美\n[04:04.00]我此刻却只想亲吻你倔强的嘴\n[04:16.00]雨下整夜 我的爱溢出就像雨水\n[04:28.00]院子落叶 跟我的思念厚厚一叠\n[04:40.00]几句是非 也无法将我的热情冷却\n[04:52.00]你出现在我诗的每一页` },
+                { id: "jay2", name: "晴天", artist: "周杰伦", audioUrl: "music/周杰伦 - 晴天.mp3", cover: "images/微信图片_20260424155838_3_2.jpg", lrc: `[00:00.00]晴天 - 周杰伦\n[00:10.00]故事的小黄花 从出生那年就飘着\n[00:22.00]童年的荡秋千 随记忆一直晃到现在\n[00:34.00]Re So So Si Do Si La So La Si Si Si Si La Si La So\n[00:46.00]吹着前奏 望着天空 我想起花瓣 试着掉落\n[00:58.00]为你翘课的那一天 花落的那一天 教室的那一间 我怎么看不见\n[01:10.00]消失的下雨天 好想再问一遍 你会等待还是离开\n[01:22.00]刮风这天 我试过握着你手 但偏偏 雨渐渐 大到我看你不见\n[01:34.00]还要多久 我才能在你身边 等到放晴那天 也许我会比较好一点\n[01:46.00]从前从前 有个人爱你很久 但偏偏 风渐渐 把距离吹得好远\n[01:58.00]好不容易 又能再多爱一天 但故事的最后你好像还是说了 拜拜\n[02:15.00]为你翘课的那一天 花落的那一天 教室的那一间 我怎么看不见\n[02:30.00]消失的下雨天 好想再问一遍 你会等待还是离开\n[02:45.00]刮风这天 我试过握着你手 但偏偏 雨渐渐 大到我看你不见\n[03:00.00]还要多久 我才能在你身边 等到放晴那天 也许我会比较好一点\n[03:15.00]从前从前 有个人爱你很久 偏偏 风渐渐 把距离吹得好远\n[03:30.00]好不容易 又能再多爱一天 但故事的最后你好像还是说了 拜拜` },
+                { id: "jay3", name: "夜曲", artist: "周杰伦", audioUrl: "music/周杰伦 - 夜曲.mp3", cover: "images/微信图片_20260424155838_4_2.jpg", lrc: `[00:00.00]夜曲 - 周杰伦\n[00:08.00]一群嗜血的蚂蚁 被腐肉所吸引 我面无表情 看孤独的风景\n[00:22.00]失去你 爱恨开始分明 失去你 还有什么事好关心\n[00:36.00]那鸽子不再象征和平 我终于被提醒 广场上喂食的是秃鹰\n[00:50.00]我用漂亮的押韵 形容被掠夺一空的爱情\n[01:04.00]啊 乌云开始遮蔽 夜色不干净 公园里 葬礼的回音 在漫天飞行\n[01:18.00]送你的白色玫瑰 在纯黑的环境凋零 乌鸦在树枝上诡异的很安静\n[01:32.00]静静听 我黑色的大衣 想温暖你 日渐冰冷的回忆\n[01:46.00]走过的 走过的生命 啊 四周弥漫雾气 我在空旷的墓地\n[02:00.00]老去后还爱你 为你弹奏肖邦的夜曲 纪念我死去的爱情\n[02:14.00]跟夜风一样的声音 心碎的很好听 手在键盘敲很轻 我给的思念很小心\n[02:28.00]你埋葬的地方叫幽冥 为你弹奏肖邦的夜曲 纪念我死去的爱情\n[02:42.00]而我为你隐姓埋名 在月光下弹琴 对你心跳的感应 还是如此温热亲近\n[02:56.00]怀念你那鲜红的唇印` }
+            ],
+            "陈奕迅": [
+                { id: "eason1", name: "十年", artist: "陈奕迅", audioUrl: "music/陈奕迅 - 十年.mp3", cover: "images/微信图片_20260424155842_7_2.jpg", lrc: `[00:00.00]十年 - 陈奕迅\n[00:12.00]如果那两个字没有颤抖 我不会发现 我难受\n[00:24.00]怎么说出口 也不过是分手\n[00:36.00]如果对于明天没有要求 牵牵手就像旅游\n[00:48.00]成千上万个门口 总有一个人要先走\n[01:00.00]怀抱既然不能逗留 何不在离开的时候 一边享受 一边泪流\n[01:15.00]十年之前 我不认识你 你不属于我 我们还是一样 陪在一个陌生人左右 走过渐渐熟悉的街头\n[01:30.00]十年之后 我们是朋友 还可以问候 只是那种温柔 再也找不到拥抱的理由 情人最后难免沦为朋友\n[01:50.00]怀抱既然不能逗留 何不在离开的时候 一边享受 一边泪流\n[02:05.00]十年之前 我不认识你 你不属于我 我们还是一样 陪在一个陌生人左右 走过渐渐熟悉的街头\n[02:20.00]十年之后 我们是朋友 还可以问候 只是那种温柔 再也找不到拥抱的理由 情人最后难免沦为朋友\n[02:40.00]直到和你做了多年朋友 才明白我的眼泪 不是为你而流 也为别人而流` },
+                { id: "eason2", name: "浮夸", artist: "陈奕迅", audioUrl: "music/陈奕迅 - 浮夸.mp3", cover: "images/微信图片_20260424155841_6_2.jpg", lrc: `[00:00.00]浮夸 - 陈奕迅\n[00:08.00]有人问我 我就会讲 但是无人来 我期待 到无奈 有话要讲 得不到装载\n[00:22.00]我的心情犹像樽盖 等被揭开 嘴巴却在养青苔\n[00:36.00]人潮内 愈文静 愈变得不受理睬 自己要搞出意外\n[00:50.00]像突然 地高歌 任何地方也像开四面台 着最闪的衫 扮十分感慨 有人来拍照要记住插袋\n[01:08.00]你当我是浮夸吧 夸张只因我很怕 似木头 似石头 的话 得到注意吗\n[01:22.00]其实怕被忘记 至放大来演吧 很不安 怎去优雅 世上还赞颂沉默吗\n[01:36.00]不够爆炸 怎么有话题 让我夸 做大娱乐家\n[01:50.00]那年十八 母校舞会 站着如喽罗 那时候 我含泪发誓各位 必须看到我\n[02:04.00]在世间 平凡又普通的路太多 屋村你住哪一座\n[02:18.00]情爱中 工作中 受过的忽视太多 自尊已饱经跌堕 重视能治肚饿\n[02:32.00]未曾获得过便知我为何 大动作很多 犯下这些错 搏人们看看我 算病态么\n[02:46.00]你当我是浮夸吧 夸张只因我很怕 似木头 似石头 的话 得到注意吗\n[03:00.00]其实怕被忘记 至放大来演吧 很不安 怎去优雅 世上还赞颂沉默吗 不够爆炸 怎么有话题 让我夸 做大娱乐家` }
+            ],
+            "邓紫棋": [
+                { id: "gemi1", name: "光年之外", artist: "邓紫棋", audioUrl: "music/G.E.M.邓紫棋 - 光年之外.mp3", cover: "images/微信图片_20260424155846_9_2.jpg", lrc: `[00:00.00]光年之外 - 邓紫棋\n[00:08.00]感受停在我发端的指尖 如何瞬间 冻结时间 记住望着我坚定的双眼 也许已经 没有明天\n[00:24.00]面对浩瀚的星海 我们微小得像尘埃 漂浮在一片无奈\n[00:40.00]缘分让我们相遇乱世以外 命运却要我们危难中相爱 也许未来遥远在光年之外 我愿守候未知里为你等待\n[01:00.00]我没想到 为了你 我能疯狂到 山崩海啸 没有你 根本不想逃\n[01:12.00]我的大脑 为了你 已经疯狂到 脉搏心跳 没有你 根本不重要\n[01:24.00]一双围在我胸口的臂弯 足够抵挡 天旋地转 一种执迷不放手的倔强 足以点燃 所有希望\n[01:42.00]宇宙磅礡而冷漠 我们的爱微小却闪烁 颠簸 却如此忘我\n[02:00.00]缘分让我们相遇乱世以外 命运却要我们危难中相爱 也许未来遥远在光年之外 我愿守候未知里为你等待\n[02:20.00]我没想到 为了你 我能疯狂到 山崩海啸 没有你 根本不想逃\n[02:32.00]我的大脑 为了你 已经疯狂到 脉搏心跳 没有你 根本不重要\n[02:44.00]也许航道以外 是醒不来的梦 乱世以外 是纯粹的相拥\n[02:56.00]我没想到 为了你 我能疯狂到 山崩海啸 没有你 根本不想逃\n[03:08.00]我的大脑 为了你 已经疯狂到 脉搏心跳 没有你 根本不重要` },
+                { id: "gemi2", name: "泡沫", artist: "邓紫棋", audioUrl: "music/G.E.M.邓紫棋 - 泡沫 (G.E.M.重生版).mp3", cover: "images/微信图片_20260424155843_8_2.jpg", lrc: `[00:00.00]泡沫 - 邓紫棋\n[00:08.00]阳光下的泡沫 是彩色的 就像被骗的我 是幸福的 追究什么对错 你的谎言 基于你还爱我\n[00:24.00]美丽的泡沫 虽然一刹花火 你所有承诺 虽然都太脆弱 但爱像泡沫 如果能够看破 有什么难过\n[00:45.00]早该知道泡沫 一触就破 就像已伤的心 不胜折磨 也不是谁的错 谎言再多 基于你还爱我\n[01:04.00]美丽的泡沫 虽然一刹花火 你所有承诺 虽然都太脆弱 爱本是泡沫 如果能够看破 有什么难过\n[01:25.00]再美的花朵 盛开过就凋落 再亮眼的星 一闪过就坠落 爱本是泡沫 如果能够看破 有什么难过\n[01:46.00]为什么难过 有什么难过 为什么难过\n[01:58.00]全都是泡沫 只一刹的花火 你所有承诺 全部都太脆弱 而你的轮廓 怪我没有看破 才如此难过\n[02:20.00]相爱的把握 要如何再搜索 相拥着寂寞 难道就不寂寞 爱本是泡沫 怪我没有看破 才如此难过\n[02:42.00]在雨下的泡沫 一触就破 当初炽热的心 早已沉没 说什么你爱我 如果骗我 我宁愿你沉默` }
+            ],
+            "李荣浩": [
+                { id: "ronghao1", name: "模特", artist: "李荣浩", audioUrl: "music/李荣浩 - 模特.mp3", cover: "images/微信图片_20260424155849_10_2.jpg", lrc: `[00:00.00]模特 - 李荣浩\n[00:10.00]穿华丽的服装 为原始的渴望而站着 用完美的表情 为脆弱的城市而撑着\n[00:26.00]我冷漠的接受 你焦急的等待也困着 像无数生存在橱窗里的模特\n[00:42.00]除了灯以外 我还能看见什么 除了光以外 我还能要求什么 除了你以外 还能倚赖哪一个\n[01:00.00]在千里以外 在呼喊的是什么 在百年以后 想回忆的是什么 在离开以前 能否再见那一刻\n[01:18.00]记得 你的眼睛将会亮着 我的手臂将会挥着 谁说世界早已没有选择\n[01:36.00]趁着 我会喜怒你会哀乐 唱几分钟情歌 没什么 至少证明我们还活着\n[01:54.00]像单纯的蝴蝶 为玫瑰的甜美而飞着 像顽皮的小猫 为明天的好奇而睡着\n[02:10.00]是浑浊的时代 还是纯粹的宿命 我冷漠的接受 你焦急的等待也困着\n[02:26.00]记得 你的眼睛将会亮着 我的手臂将会挥着 谁说世界早已没有选择\n[02:44.00]趁着 我会喜怒你会哀乐 唱几分钟情歌 没什么 至少证明我们还活着` },
+                { id: "ronghao2", name: "年少有为", artist: "李荣浩", audioUrl: "music/李荣浩 - 年少有为.mp3", cover: "images/微信图片_20260424155850_11_2.jpg", lrc: `[00:00.00]年少有为 - 李荣浩\n[00:08.00]电视一直闪 联络方式都还没删 你待我的好 我却错手毁掉\n[00:24.00]也曾一起想 有个地方睡觉吃饭 可怎么去熬 日夜颠倒连头款也凑不到\n[00:40.00]假如我年少有为 不自卑 懂得什么是珍贵 那些美梦 没给你 我一生有愧\n[00:56.00]假如我年少有为 知进退 才不会让你替我受罪 婚礼上 多喝几杯 和你现在那位\n[01:16.00]也曾一起想 有个地方睡觉吃饭 可怎么去熬 日夜颠倒连头款也凑不到\n[01:32.00]假如我年少有为 不自卑 尝过后悔的滋味 金钱地位 搏到了却好想退回\n[01:48.00]假如我年少有为 知进退 才不会让你替我受罪 婚礼上 多喝几杯 和你现在那位\n[02:08.00]假如我年少有为 不自卑 懂得什么是珍贵 那些美梦 没给你 我一生有愧\n[02:24.00]假如我年少有为 知进退 才不会让你替我受罪 婚礼上 多喝几杯 和你现在那位\n[02:44.00]在故事里 听你一句安慰` }
+            ]
+        };
+
+        let currentArtist = "all";
+        let currentSongs = getAllSongs();
+        let currentIndex = 0;
+        let isPlaying = false;
+        let playMode = 0;
+        let currentLyrics = [];
+
+        function getAllSongs() {
+            let allSongs = [];
+            for (let artist in SONGS_DB) {
+                allSongs = allSongs.concat(SONGS_DB[artist]);
+            }
+            return allSongs;
+        }
+
+        const audio = document.getElementById('audioPlayer');
+        const playBtn = document.getElementById('playBtn');
+        const detailPlayBtn = document.getElementById('detailPlayBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const currentTimeEl = document.getElementById('currentTime');
+        const durationEl = document.getElementById('duration');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const playerSongName = document.getElementById('playerSongName');
+        const playerArtistName = document.getElementById('playerArtistName');
+        const playerCover = document.getElementById('playerCover');
+        const largeCover = document.getElementById('largeCover');
+        const largeSongName = document.getElementById('largeSongName');
+        const largeArtistName = document.getElementById('largeArtistName');
+        const lyricsContainer = document.getElementById('lyricsContainer');
+        const songListContainer = document.getElementById('songListContainer');
+        const playlistTitle = document.getElementById('playlistTitle');
+        const songCount = document.getElementById('songCount');
+        const modeBadge = document.getElementById('modeBadge');
+        const modeText = document.getElementById('modeText');
+        const detailModeBtn = document.getElementById('detailModeBtn');
+        const detailModeText = document.getElementById('detailModeText');
+
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return "0:00";
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        function parseLRC(lrcText) {
+            const lines = lrcText.split('\n');
+            const lyrics = [];
+            const timeRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/;
+            for (const line of lines) {
+                const match = timeRegex.exec(line);
+                if (match) {
+                    const minutes = parseInt(match[1]);
+                    const seconds = parseInt(match[2]);
+                    const milliseconds = parseInt(match[3].padEnd(3, '0'));
+                    const time = minutes * 60 + seconds + milliseconds / 1000;
+                    const text = match[4].trim();
+                    if (text) lyrics.push({ time, text });
+                }
+            }
+            return lyrics.sort((a, b) => a.time - b.time);
+        }
+
+        function renderLyrics(currentTime) {
+            if (currentLyrics.length === 0) {
+                lyricsContainer.innerHTML = '<div class="lyric-line">暂无歌词</div>';
+                return;
+            }
+            let activeIndex = -1;
+            for (let i = 0; i < currentLyrics.length; i++) {
+                if (currentTime >= currentLyrics[i].time) activeIndex = i;
+                else break;
+            }
+            let html = '';
+            currentLyrics.forEach((line, index) => {
+                html += `<div class="lyric-line ${index === activeIndex ? 'active' : ''}">${line.text}</div>`;
+            });
+            lyricsContainer.innerHTML = html;
+            if (activeIndex !== -1) {
+                const activeElement = lyricsContainer.querySelector('.lyric-line.active');
+                if (activeElement) activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function loadSong(index) {
+            if (index < 0 || index >= currentSongs.length) return;
+            const song = currentSongs[index];
+            currentIndex = index;
+            playerSongName.textContent = song.name;
+            playerArtistName.textContent = song.artist;
+            playerCover.src = song.cover;
+            largeCover.src = song.cover;
+            largeSongName.textContent = song.name;
+            largeArtistName.textContent = song.artist;
+            audio.src = song.audioUrl;
+            currentLyrics = parseLRC(song.lrc);
+            renderLyrics(0);
+            updatePlaylistHighlight();
+            currentTimeEl.textContent = "0:00";
+            durationEl.textContent = "0:00";
+            progressFill.style.width = "0%";
+        }
+
+        function updatePlaylistHighlight() {
+            const items = songListContainer.querySelectorAll('.song-list-item');
+            items.forEach((item, index) => {
+                item.classList.toggle('active', index === currentIndex);
+            });
+        }
+
+        function renderPlaylist() {
+            songListContainer.innerHTML = '';
+            currentSongs.forEach((song, index) => {
+                const div = document.createElement('div');
+                div.className = `song-list-item ${index === currentIndex ? 'active' : ''}`;
+                div.innerHTML = `
+                    <div class="song-number">${index + 1}</div>
+                    <div class="song-name-cell">
+                        <img src="${song.cover}" alt="${song.name}">
+                        <div class="song-name-text">${song.name}</div>
+                    </div>
+                    <div class="song-artist-cell">${song.artist}</div>
+                    <div class="song-duration-cell">--:--</div>
+                `;
+                div.addEventListener('click', () => {
+                    if (currentIndex !== index) {
+                        currentIndex = index;
+                        loadSong(currentIndex);
+                        playSong();
+                    } else {
+                        if (audio.paused) playSong();
+                        else pauseSong();
+                    }
+                });
+                songListContainer.appendChild(div);
+            });
+            songCount.textContent = `${currentSongs.length}首`;
+        }
+
+        function switchCategory(artist) {
+            currentArtist = artist;
+            if (artist === 'all') {
+                currentSongs = getAllSongs();
+                playlistTitle.textContent = '全部歌曲';
+            } else {
+                currentSongs = [...SONGS_DB[artist]];
+                playlistTitle.textContent = `${artist}的歌曲`;
+            }
+            currentIndex = 0;
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.artist === artist) item.classList.add('active');
+            });
+            renderPlaylist();
+            if (currentSongs.length > 0) loadSong(currentIndex);
+        }
+
+        function playSong() {
+            audio.play().then(() => {
+                isPlaying = true;
+                playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                detailPlayBtn.innerHTML = '<i class="fas fa-pause"></i> 暂停';
+            }).catch(err => console.error("播放失败:", err));
+        }
+
+        function pauseSong() {
+            audio.pause();
+            isPlaying = false;
+            playBtn.innerHTML = '<i class="fas fa-play"></i>';
+            detailPlayBtn.innerHTML = '<i class="fas fa-play"></i> 播放';
+        }
+
+        function togglePlay() {
+            if (isPlaying) pauseSong();
+            else playSong();
+        }
+
+        function nextSong() {
+            if (playMode === 1) {
+                let newIndex;
+                do {
+                    newIndex = Math.floor(Math.random() * currentSongs.length);
+                } while (newIndex === currentIndex && currentSongs.length > 1);
+                currentIndex = newIndex;
+            } else if (playMode === 0) {
+                currentIndex = (currentIndex + 1) % currentSongs.length;
+            }
+            loadSong(currentIndex);
+            if (isPlaying) playSong();
+        }
+
+        function prevSong() {
+            if (playMode === 1) {
+                let newIndex;
+                do {
+                    newIndex = Math.floor(Math.random() * currentSongs.length);
+                } while (newIndex === currentIndex && currentSongs.length > 1);
+                currentIndex = newIndex;
+            } else {
+                currentIndex = (currentIndex - 1 + currentSongs.length) % currentSongs.length;
+            }
+            loadSong(currentIndex);
+            if (isPlaying) playSong();
+        }
+
+        function switchPlayMode() {
+            playMode = (playMode + 1) % 3;
+            const modes = ['顺序', '随机', '单曲循环'];
+            const icons = ['fa-list', 'fa-random', 'fa-redo'];
+            const fullModes = ['顺序播放', '随机播放', '单曲循环'];
+            modeText.textContent = modes[playMode];
+            modeBadge.innerHTML = `<i class="fas ${icons[playMode]}"></i> <span>${modes[playMode]}</span>`;
+            detailModeText.textContent = fullModes[playMode];
+        }
+
+        function updateProgress() {
+            if (audio.duration) {
+                const progressPercent = (audio.currentTime / audio.duration) * 100;
+                progressFill.style.width = `${progressPercent}%`;
+                currentTimeEl.textContent = formatTime(audio.currentTime);
+                durationEl.textContent = formatTime(audio.duration);
+                renderLyrics(audio.currentTime);
+            }
+        }
+
+        function setProgress(e) {
+            const width = progressBar.clientWidth;
+            const clickX = e.offsetX;
+            const duration = audio.duration;
+            if (duration) audio.currentTime = (clickX / width) * duration;
+        }
+
+        function initPlayer() {
+            const savedVolume = localStorage.getItem('playerVolume');
+            if (savedVolume !== null) {
+                audio.volume = parseFloat(savedVolume);
+                volumeSlider.value = audio.volume;
+            }
+            renderPlaylist();
+            if (currentSongs.length > 0) loadSong(currentIndex);
+            playBtn.addEventListener('click', togglePlay);
+            detailPlayBtn.addEventListener('click', togglePlay);
+            prevBtn.addEventListener('click', prevSong);
+            nextBtn.addEventListener('click', nextSong);
+            modeBadge.addEventListener('click', switchPlayMode);
+            detailModeBtn.addEventListener('click', switchPlayMode);
+            audio.addEventListener('timeupdate', updateProgress);
+            audio.addEventListener('loadedmetadata', () => {
+                durationEl.textContent = formatTime(audio.duration);
+            });
+            audio.addEventListener('ended', () => {
+                if (playMode === 2) {
+                    audio.currentTime = 0;
+                    playSong();
+                } else nextSong();
+            });
+            progressBar.addEventListener('click', setProgress);
+            volumeSlider.addEventListener('input', (e) => {
+                audio.volume = e.target.value;
+                localStorage.setItem('playerVolume', audio.volume);
+            });
+            document.querySelectorAll('.sidebar-item[data-artist]').forEach(item => {
+                item.addEventListener('click', () => {
+                    if (item.dataset.artist !== currentArtist) switchCategory(item.dataset.artist);
+                });
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', initPlayer);
+    </script>
+</body>
+</html>
